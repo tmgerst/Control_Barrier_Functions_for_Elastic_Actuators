@@ -1,18 +1,11 @@
-function u_enforced = enforceConstraints(x,u_nom,f_x,g_x,barrier_functions,grad_barrier_functions)
+function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,barrier_functions,grad_barrier_functions)
 %       
         if isempty(barrier_functions)
             u_enforced = u_nom;
             return;
         end
-
-        f_x_qp = [x(2); x(3); x(4); f_x(1); 
-                  x(6); x(7); x(8); f_x(2)];
-        g_x_qp1 = [0; 0; 0; g_x(1,1);
-                   0; 0; 0; g_x(2,1)];
-        g_x_qp2 = [0; 0; 0; g_x(1,2);
-                   0; 0; 0; g_x(2,2)];
                
-        %% Enforcement through inequalities
+        %% Enforcement through inequalities (experimental, does not work well)
 %         f_x_qp_help =  repmat(f_x_qp,1,size(grad_barrier_functions,2));
 %         g_x_qp_help1 = repmat(g_x_qp1,1,size(grad_barrier_functions,2));
 %         g_x_qp_help2 = repmat(g_x_qp2,1,size(grad_barrier_functions,2));        
@@ -51,29 +44,37 @@ function u_enforced = enforceConstraints(x,u_nom,f_x,g_x,barrier_functions,grad_
 % %             end
 %         end  
         
-        %% Quadratic program
-        % Objective Function and start point
-%         quadratic_program = @(u)dot(u,u)-2*dot(u_nom,u);
-%         u0 = u_nom;
+        %% Quadratic program for damped model
+        [q_second_deriv,q_third_deriv,~,~,~] = StateVariablesHigherDerivatives(current_x,tau,sys_params);
         
-        f_x_qp_help =  repmat(f_x_qp,1,size(grad_barrier_functions,2));
-        g_x_qp_help1 = repmat(g_x_qp1,1,size(grad_barrier_functions,2));
-        g_x_qp_help2 = repmat(g_x_qp2,1,size(grad_barrier_functions,2));
+        f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); 0;
+               current_x(6); q_second_deriv(2); q_third_deriv(2); 0];
+           
+        g_x = [0, 0; 0, 0; 0, 0; 1, 0;
+               0, 0; 0, 0; 0, 0; 0, 1];
         
-        A = -[dot(grad_barrier_functions,g_x_qp_help1)', dot(grad_barrier_functions,g_x_qp_help2)'];
-        b = [dot(grad_barrier_functions,f_x_qp_help)'+cellfun(@(v) v(x),barrier_functions)];
+        f_x_qp =  repmat(f_x,1,size(grad_barrier_functions,2));
+        g_x_qp1 = repmat(g_x(:,1),1,size(grad_barrier_functions,2));
+        g_x_qp2 = repmat(g_x(:,2),1,size(grad_barrier_functions,2));
+        
+        A = -[dot(grad_barrier_functions,g_x_qp1)', dot(grad_barrier_functions,g_x_qp2)'];
+        
+        % Barrier function input has structure: 
+        % [q1, q1_first_deriv, q1_second_deriv, q1_third_deriv, q2, q2_first_deriv, q2_second_deriv, q2_third_deriv]
+        barrier_function_input = [current_x(1), current_x(2), q_second_deriv(1), q_third_deriv(1),...
+                                  current_x(5), current_x(6), q_second_deriv(2), q_third_deriv(2)];
+        b = [dot(grad_barrier_functions,f_x_qp)'+cellfun(@(v) v(barrier_function_input),barrier_functions)];
         
         Aeq = [];   beq = [];
         lb = [];    ub = [];
         nonlcon = [];
-
-%         opts = optimoptions('fmincon','MaxFunctionEvaluations',100,'MaxIterations',50,...
-%             'OptimalityTolerance',1e-2,'StepTolerance',1e-2,'FiniteDifferenceStepSize',1e-2,...
-%             'Display','none');
-%         u_enforced = fmincon(quadratic_program,u0,A,b,Aeq,beq,lb,ub,nonlcon,opts);
         
         opts_quadprog = optimset('Display','none');
-        opts_quadprog.StepTolerance = 1e-2; 
-        opts_quadprog.OptimalityTolerance = 1e-2;
+%         opts_quadprog.StepTolerance = 1e-2; 
+%         opts_quadprog.OptimalityTolerance = 1e-2;
         u_enforced = quadprog(eye(2),-u_nom',A,b,[],[],[],[],[],opts_quadprog);
+        
+        if isempty(u_enforced)
+            dbstop at 80;
+        end
 end

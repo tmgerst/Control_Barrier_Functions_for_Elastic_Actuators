@@ -51,7 +51,7 @@ function [fig_simulation,video_handle] = drawAnimatedSystem(t,x,x_ref,sys_params
         end
         
         % Reference trajectory
-        plot(l1*cos(x_ref.theta1) + l2*cos(x_ref.theta1+x_ref.theta2), l1*sin(x_ref.theta1) + l2*sin(x_ref.theta1+x_ref.theta2), ...
+        plot(l1*cos(x_ref.q1) + l2*cos(x_ref.q1+x_ref.q2), l1*sin(x_ref.q1) + l2*sin(x_ref.q1+x_ref.q2), ...
             'r--','LineWidth', 0.3);
         
         if i <= increment

@@ -49,5 +49,5 @@ function dxdt = twoDofPlanarRobotWithDamping(t,x,tau,sys_params)
     g_x = [0, 0; 0, 0; 0, 0; inv_motor_inertia(1,1), inv_motor_inertia(1,2);
            0, 0; 0, 0; 0, 0; inv_motor_inertia(2,1), inv_motor_inertia(2,2)];
        
-    dxdt = f_x + g_x*tau;   
+    dxdt = f_x+g_x*tau;   
 end

@@ -1,4 +1,4 @@
-function [q_second_deriv, q_third_deriv, q_fourth_deriv, theta_second_deriv] = StateVariablesHigherDerivatives(x,sys_params)
+function [q_second_deriv, q_third_deriv, q_fourth_deriv, theta_second_deriv, delta] = StateVariablesHigherDerivatives(x,tau,sys_params)
 %
     %% System parameters and convenient variable naming
     m1 = sys_params.m1; m2 = sys_params.m2;
@@ -60,7 +60,7 @@ function [q_second_deriv, q_third_deriv, q_fourth_deriv, theta_second_deriv] = S
     
     n_dot = C_dot + G_dot;
     beta = n_dot + D*q_second_deriv + K*[x(2);x(6)] + M_dot*q_second_deriv;
-    theta_second_deriv = -inv(J)*( D*([x(4);x(8)]-[x(2);x(6)]) + K*([x(3);x(7)]-[x(1);x(5)]) );
+    theta_second_deriv = inv(J)*tau - inv(J)*( D*([x(4);x(8)]-[x(2);x(6)]) + K*([x(3);x(7)]-[x(1);x(5)]) );
     
     q_third_deriv = inv(M) * ( -beta + D*theta_second_deriv + K*[x(4);x(8)] );
     

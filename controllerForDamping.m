@@ -1,16 +1,22 @@
-function [v, index] = controllerForDamping(t_span,i,current_x,x_ref,sys_params)
+function [v, index] = controllerForDamping(current_t,current_x,tau,x_ref,sys_params)
 %
-    L = [1e4, 1e3, 300, 10, 0, 0, 0, 0, 0, 0;
-         0, 0, 0, 0, 0, 1e4, 1e3, 300, 10, 0];
-
-%     L = [1, 10, 0, 0, 0, 0, 0, 0, 0, 0;
-%          0, 0, 0, 0, 0, 1, 10, 0, 0, 0];
-
-    [q_second_deriv,q_third_deriv,q_fourth_deriv,~] = StateVariablesHigherDerivatives(current_x,sys_params); 
+    % Feedback gain matrix
+    L = [1e4, 1e3, 300, 10, 0, 0, 0, 0;
+         0, 0, 0, 0, 1e4, 1e3, 300, 10];
      
-    index = find(x_ref.t==t_span(i));
-    v = L*( [x_ref.theta1(index),x_ref.theta1_first_dv(index),x_ref.theta1_second_dv(index),x_ref.theta1_third_dv(index),x_ref.theta1_fourth_dv(index),...
-             x_ref.theta2(index),x_ref.theta2_first_dv(index),x_ref.theta2_second_dv(index),x_ref.theta2_third_dv(index),x_ref.theta2_fourth_dv(index)] - ...
-            [current_x(1),current_x(2),q_second_deriv(1),q_third_deriv(1),q_fourth_deriv(1),...
-             current_x(5),current_x(6),q_second_deriv(2),q_third_deriv(2),q_fourth_deriv(2)] )';
+    % Find timestamp corresponding reference trajectory values
+    index = find(x_ref.t==current_t);
+    
+    x_ref_link_angles = [x_ref.q1(index),x_ref.q1_first_deriv(index),x_ref.q1_second_deriv(index),x_ref.q1_third_deriv(index),...
+                         x_ref.q2(index),x_ref.q2_first_deriv(index),x_ref.q2_second_deriv(index),x_ref.q2_third_deriv(index)];
+    
+    % Compute higher derivatives at current timestamp to compare them against the reference
+    [q_second_deriv,q_third_deriv,~,~,~] = StateVariablesHigherDerivatives(current_x,tau,sys_params); 
+    
+    x_link_angles = [current_x(1),current_x(2),q_second_deriv(1),q_third_deriv(1),...
+                     current_x(5),current_x(6),q_second_deriv(2),q_third_deriv(2)];
+    
+    % Compute controller output
+    v = [x_ref.q1_fourth_deriv(index); x_ref.q2_fourth_deriv(index)] + L*(x_ref_link_angles - x_link_angles)';
+%     v = L*(x_ref_link_angles - x_link_angles)';
 end

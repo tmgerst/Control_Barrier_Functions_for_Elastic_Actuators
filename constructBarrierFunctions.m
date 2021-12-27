@@ -1,7 +1,7 @@
 function [B, grad_B] = constructBarrierFunctions(bounds_min,bounds_max)
 %
         gamma = 16;
-        beta = 0;
+        beta = pi/10;
         grad_B_min = [];    grad_B_max = [];        
         
         %% CBFs for min. bounds
