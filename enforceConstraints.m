@@ -1,4 +1,4 @@
-function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,tau_first_deriv,barrier_functions,grad_barrier_functions)
+function u_enforced = enforceConstraints(control_for_damping_used,current_x,sys_params,u_nom,tau,tau_first_deriv,barrier_functions,grad_barrier_functions)
 %       
         if isempty(barrier_functions)
             u_enforced = u_nom;
@@ -45,14 +45,29 @@ function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,tau_firs
 %         end  
         
         %% Quadratic program for damped model
-        [q_second_deriv,q_third_deriv,~,~,~,~,~,~,~,~] = ...
+        [q_second_deriv,q_third_deriv,~,~,~,M,M_dot,M_dotdot,n,n_dotdot] = ...
             StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
         
-        f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); 0;
-               current_x(6); q_second_deriv(2); q_third_deriv(2); 0];
-           
-        g_x = [0, 0; 0, 0; 0, 0; 1, 0;
-               0, 0; 0, 0; 0, 0; 0, 1];
+        if control_for_damping_used
+            f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); 0;
+                   current_x(6); q_second_deriv(2); q_third_deriv(2); 0];
+
+            g_x = [0, 0; 0, 0; 0, 0; 1, 0;
+                   0, 0; 0, 0; 0, 0; 0, 1];
+        else
+            K = [sys_params.k1, 0; 0, sys_params.k2];
+            J = sys_params.j * eye(2);
+            
+            f_x4 = -inv(M)*K*inv(J)*(M*q_second_deriv+n)...
+                -inv(M)*( M_dotdot*q_second_deriv+2*M_dot*q_third_deriv+n_dotdot+K*q_second_deriv );
+
+            g_x4 = inv(M) * K * inv(J);
+            
+            f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); f_x4(1);
+                   current_x(6); q_second_deriv(2); q_third_deriv(2); f_x4(2)];
+            g_x = [0, 0; 0, 0; 0, 0; g_x4(1,1), g_x4(1,2);
+                   0, 0; 0, 0; 0, 0; g_x4(2,1), g_x4(2,2)];
+        end
         
         f_x_qp =  repmat(f_x,1,size(grad_barrier_functions,2));
         g_x_qp1 = repmat(g_x(:,1),1,size(grad_barrier_functions,2));

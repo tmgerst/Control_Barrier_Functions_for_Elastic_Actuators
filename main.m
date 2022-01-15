@@ -9,8 +9,8 @@ clc;
 sys_params.l1 = 1;      sys_params.l2 = 1;
 sys_params.m1 = 1;      sys_params.m2 = 1;
 sys_params.r1 = 1;      sys_params.r2 = 1;
-sys_params.k1 = 0;      sys_params.k2 = 0;
-sys_params.d1 = 1;      sys_params.d2 = 1;
+sys_params.k1 = 1;      sys_params.k2 = 1;
+sys_params.d1 = 0;      sys_params.d2 = 0;
 sys_params.j = 1;
 
 use_dynamic_compensator = false;
@@ -21,7 +21,7 @@ animate_system          = true;
 draw_trajectory         = false;
 
 sample_time = 0.01;
-stop_time = 30;
+stop_time = 15;
 t_span = (0:sample_time:stop_time)';
 
 %% Construct reference trajectory
@@ -77,8 +77,11 @@ for i=1:(length(t_span)-1)
     %% Compute control for system with damping
     if use_dynamic_compensator
         
+        control_for_damped_model_used = true;
+        
         [v_nom,index] = controllerForDamping(t_span(i),current_x,tau,tau_first_deriv,x_ref,sys_params);
-        v = enforceConstraints(current_x,sys_params,v_nom,tau,tau_first_deriv,barrier_functions,grad_barrier_functions);
+        v = enforceConstraints(control_for_damped_model_used,current_x,sys_params,v_nom,tau,tau_first_deriv,...
+            barrier_functions,grad_barrier_functions);
         u_dot = dynamicCompensator(current_x,v,u,tau,tau_first_deriv,sys_params);
 
         % Integrate over u_dot
@@ -94,6 +97,8 @@ for i=1:(length(t_span)-1)
     
     %% Compute control for system without damping 
     else
+        control_for_damped_model_used = false;
+        
         [q_second_deriv,q_third_deriv,q_fourth_deriv,theta_second_deriv,delta,M,M_dot,M_dotdot,n,n_dotdot] = ...
             StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
         
@@ -120,8 +125,9 @@ for i=1:(length(t_span)-1)
         
         % Compute controller output
         [v, index] = controllerForDamping(t_span(i),current_x,tau,tau_first_deriv,x_ref,sys_params);
-        tau = inv(g_x4)*(v-f_x4); 
-        tau = enforceConstraints(current_x,sys_params,tau_nom,tau,barrier_functions,grad_barrier_functions);
+        tau_nom = inv(g_x4)*(v-f_x4); 
+        tau = enforceConstraints(control_for_damped_model_used,current_x,sys_params,tau_nom,tau,tau_first_deriv,...
+            barrier_functions,grad_barrier_functions);
         
         fprintf("f_x4: [%.4f, %.4f] | g_x4: [%.4f, %.4f; %.4f, %.4f]\n", f_x4(1), f_x4(2), g_x4(1,1), g_x4(1,2), g_x4(2,1), g_x4(2,2));
         % Set u_dot and u for the system states table to NaN
