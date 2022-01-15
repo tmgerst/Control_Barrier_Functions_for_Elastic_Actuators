@@ -1,4 +1,4 @@
-function u_dot = dynamicCompensator(x,v,u,tau,sys_params)
+function u_dot = dynamicCompensator(x,v,u,tau,tau_first_deriv,sys_params)
 %
     %% System parameters and convenient variable naming
     m1 = sys_params.m1; m2 = sys_params.m2;
@@ -23,7 +23,7 @@ function u_dot = dynamicCompensator(x,v,u,tau,sys_params)
                 m2*(lc2^2+l1*lc2*cos(x(5))) + I2,                       m2*lc2^2 + I2           ];     
     
     %% Calculate higher derivatives of state variables
-    [~,~,~,~,delta] = StateVariablesHigherDerivatives(x,tau,sys_params);
+    [~,~,~,~,delta,~,~,~,~,~] = StateVariablesHigherDerivatives(x,tau,tau_first_deriv,sys_params);
         
     %% Calculate u_dot
     u_dot = inv(D)*(M*v + delta - K*u);

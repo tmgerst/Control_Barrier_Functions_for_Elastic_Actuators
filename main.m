@@ -9,9 +9,11 @@ clc;
 sys_params.l1 = 1;      sys_params.l2 = 1;
 sys_params.m1 = 1;      sys_params.m2 = 1;
 sys_params.r1 = 1;      sys_params.r2 = 1;
-sys_params.k1 = 1;      sys_params.k2 = 1;
+sys_params.k1 = 0;      sys_params.k2 = 0;
 sys_params.d1 = 1;      sys_params.d2 = 1;
 sys_params.j = 1;
+
+use_dynamic_compensator = false;
 
 draw_reference_states   = false;
 draw_system_states      = false;
@@ -31,17 +33,13 @@ t_span = (0:sample_time:stop_time)';
 x_ref = constructReferenceStates([],[],t_span);
 
 %% Set boundaries for system
-bounds_min = [NaN;NaN;NaN;NaN;
-              NaN;NaN;NaN;NaN];
+bounds_min = [-3/4*pi;NaN;NaN;NaN;
+              -pi/2;NaN;NaN;NaN];
 bounds_max = [3/4*pi;NaN;NaN;NaN;
-              NaN;NaN;NaN;NaN];
+              pi/2;NaN;NaN;NaN];
 [barrier_functions,grad_barrier_functions] = constructBarrierFunctions(bounds_min,bounds_max);
 if isempty(barrier_functions)
     fprintf("No barrier functions have been constructed. Resuming simulation without constraint enforcement by CBFs.\n");
-end
-
-if draw_reference_states
-    fig_reference_states = drawSystemStates(t_span,[],x_ref,bounds_min,bounds_max,'Reference');
 end
 
 %% System without damping
@@ -60,32 +58,83 @@ var_types = {'double', 'double', 'double', 'double', 'double', 'double', 'double
             'double', 'double', 'double', 'double', 'double', 'double' 'double', 'double'}; 
 system_states = table('Size', [length(t_span),length(var_names)], 'VariableNames', var_names, 'VariableTypes', var_types);
 
+debug_help = table('Size', [length(t_span),10], 'VariableNames', ...
+    {'q_second_deriv1','q_second_deriv2','q_third_deriv1','q_third_deriv2','q_fourth_deriv1','q_fourth_deriv2',...
+    'theta_second_deriv1','theta_second_deriv2','delta1','delta2'},...
+    'VariableTypes',{'double','double','double','double','double','double','double','double','double','double'});
+
 for i=1:(length(t_span)-1)
     %% Start conditions
     if i==1
         current_x = x0;
         u = zeros(2,1);
         tau = zeros(2,1);
+        tau_first_deriv = zeros(2,1);
     else
         current_x = x(end,:);
     end
     
-    %% Control via dynamic compensator
-    [v_nom,index] = controllerForDamping(t_span(i),current_x,tau,x_ref,sys_params);
-    v = enforceConstraints(current_x,sys_params,v_nom,tau,barrier_functions,grad_barrier_functions);
-    u_dot = dynamicCompensator(current_x,v,u,tau,sys_params);
+    %% Compute control for system with damping
+    if use_dynamic_compensator
+        
+        [v_nom,index] = controllerForDamping(t_span(i),current_x,tau,tau_first_deriv,x_ref,sys_params);
+        v = enforceConstraints(current_x,sys_params,v_nom,tau,tau_first_deriv,barrier_functions,grad_barrier_functions);
+        u_dot = dynamicCompensator(current_x,v,u,tau,tau_first_deriv,sys_params);
+
+        % Integrate over u_dot
+        if i~=1
+            u = [trapz([system_states.t(1:i-1);t_span(i)],[system_states.u_dot1(1:i-1);u_dot(1)]); 
+                trapz([system_states.t(1:i-1);t_span(i)],[system_states.u_dot2(1:i-1);u_dot(2)])];
+        end
+
+        % Compute actual motor torques
+        tau = sys_params.j*eye(2)*u + ...
+            [sys_params.d1,0;0,sys_params.d2] * ([current_x(4);current_x(8)]-[current_x(2);current_x(6)]) + ...
+            [sys_params.k1,0;0,sys_params.k2] * ([current_x(3);current_x(7)]-[current_x(1);current_x(5)]);
     
-    if i~=1
-        u = [trapz([system_states.t(1:i-1);t_span(i)],[system_states.u_dot1(1:i-1);u_dot(1)]); 
-            trapz([system_states.t(1:i-1);t_span(i)],[system_states.u_dot2(1:i-1);u_dot(2)])];
+    %% Compute control for system without damping 
+    else
+        [q_second_deriv,q_third_deriv,q_fourth_deriv,theta_second_deriv,delta,M,M_dot,M_dotdot,n,n_dotdot] = ...
+            StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
+        
+        debug_help.q_second_deriv1(i)       = q_second_deriv(1);
+        debug_help.q_second_deriv2(i)       = q_second_deriv(2);
+        debug_help.q_third_deriv1(i)        = q_third_deriv(1);
+        debug_help.q_third_deriv2(i)        = q_third_deriv(2);
+        debug_help.q_fourth_deriv1(i)       = q_fourth_deriv(1);
+        debug_help.q_fourth_deriv2(i)       = q_fourth_deriv(2);
+        debug_help.theta_second_deriv1(i)   = theta_second_deriv(1);
+        debug_help.theta_second_deriv2(i)   = theta_second_deriv(2);
+        debug_help.delta1(i)                = delta(1);
+        debug_help.delta2(i)                = delta(2);
+        
+        K = [sys_params.k1, 0; 0, sys_params.k2];
+        J = sys_params.j * eye(2);
+        
+        % Construct system vector
+        f_x4 = -inv(M)*K*inv(J)*(M*q_second_deriv+n)...
+            -inv(M)*( M_dotdot*q_second_deriv+2*M_dot*q_third_deriv+n_dotdot+K*q_second_deriv );
+                                
+        % Construct coupling vector
+        g_x4 = inv(M) * K * inv(J);
+        
+        % Compute controller output
+        [v, index] = controllerForDamping(t_span(i),current_x,tau,tau_first_deriv,x_ref,sys_params);
+        tau = inv(g_x4)*(v-f_x4); 
+        tau = enforceConstraints(current_x,sys_params,tau_nom,tau,barrier_functions,grad_barrier_functions);
+        
+        fprintf("f_x4: [%.4f, %.4f] | g_x4: [%.4f, %.4f; %.4f, %.4f]\n", f_x4(1), f_x4(2), g_x4(1,1), g_x4(1,2), g_x4(2,1), g_x4(2,2));
+        % Set u_dot and u for the system states table to NaN
+        u_dot = [NaN; NaN]; 
+        u = [NaN; NaN];
     end
-    
-    tau = sys_params.j*eye(2)*u + ...
-        [sys_params.d1,0;0,sys_params.d2] * ([current_x(4);current_x(8)]-[current_x(2);current_x(6)]) + ...
-        [sys_params.k1,0;0,sys_params.k2] * ([current_x(3);current_x(7)]-[current_x(1);current_x(5)]); 
     
     %% Save system states
     system_states = copySystemStatesToTable(system_states,i,t_span(i),current_x,v,u_dot,u,tau);
+    
+    if i>1
+        tau_first_deriv = [(tau(1)-system_states.tau1(i-1))/sample_time; (tau(2)-system_states.tau2(i-1))/sample_time];
+    end
     
     %% Compute system at next time step
     [t,x] = ode45(@(t,x) twoDofPlanarRobotWithDamping(t,x,tau,sys_params), [t_span(i),t_span(i+1)], current_x);

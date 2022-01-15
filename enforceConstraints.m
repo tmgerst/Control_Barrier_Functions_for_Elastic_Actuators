@@ -1,4 +1,4 @@
-function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,barrier_functions,grad_barrier_functions)
+function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,tau_first_deriv,barrier_functions,grad_barrier_functions)
 %       
         if isempty(barrier_functions)
             u_enforced = u_nom;
@@ -45,7 +45,8 @@ function u_enforced = enforceConstraints(current_x,sys_params,u_nom,tau,barrier_
 %         end  
         
         %% Quadratic program for damped model
-        [q_second_deriv,q_third_deriv,~,~,~] = StateVariablesHigherDerivatives(current_x,tau,sys_params);
+        [q_second_deriv,q_third_deriv,~,~,~,~,~,~,~,~] = ...
+            StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
         
         f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); 0;
                current_x(6); q_second_deriv(2); q_third_deriv(2); 0];

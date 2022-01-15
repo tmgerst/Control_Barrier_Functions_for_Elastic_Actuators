@@ -1,4 +1,5 @@
 function u_nom = systemController(t,x,x_ref,f_x,g_x,dof_degree)
+%% IMPORTANT: Legacy function, needs to be taken out of the repo
 %
     if dof_degree == 1
         %% 1-dof-system: Control Input
