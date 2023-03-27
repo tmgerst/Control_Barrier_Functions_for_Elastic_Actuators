@@ -21,12 +21,9 @@ For more theory as well as a small animation, check out the presentation. The an
 
 ## Code structure
 The main file includes a rather straightforward simulation, where the parameters can be chosen right at the top. You can also choose from a handful of 
-output options, including a small animation. Controller parameters can be changed in the appropriate functions if needed, but the default should work fine.
+output options, including a small animation. Controller parameters can be changed in the appropriate functions in the 'control' directory if needed, but the default should work fine.
 
-## Dependencies
-The code is written in Matlab, using the Matlab R2019b release of the software.
-
-## Future work
-Currently, simulations are performed to tune the CBFs to the presence of dampings inside the joints. 
-In the future, the CBF control will also be implemented in LabView in order to flash the exoskeleton at the chair of Information-Oriented Control and
-perform experiments. 
+## Further work
+The simulations have been  performed to tune the CBFs to the presence of dampings inside the joints. 
+Afterwards, the CBF control has also been implemented in LabView in order to flash the exoskeleton at the chair of Information-Oriented Control and
+experiments were performed (see the presentation for some results). 

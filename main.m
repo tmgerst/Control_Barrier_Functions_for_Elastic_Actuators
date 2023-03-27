@@ -1,9 +1,11 @@
-%
+% Main script, simply run it.
 % 05.11.2021
 
-clear all;
-close all;
-clc;
+clear all; close all; clc;
+addpath("control/");
+addpath("models/");
+addpath("utilities/");
+addpath("visualization/");
 
 %% Parameters for the system
 sys_params.l1 = 1;      sys_params.l2 = 1;
@@ -100,7 +102,7 @@ for i=1:(length(t_span)-1)
         control_for_damped_model_used = false;
         
         [q_second_deriv,q_third_deriv,q_fourth_deriv,theta_second_deriv,delta,M,M_dot,M_dotdot,n,n_dotdot] = ...
-            StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
+            stateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
         
         debug_help.q_second_deriv1(i)       = q_second_deriv(1);
         debug_help.q_second_deriv2(i)       = q_second_deriv(2);

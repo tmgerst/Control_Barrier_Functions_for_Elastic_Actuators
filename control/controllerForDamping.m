@@ -11,7 +11,7 @@ function [v, index] = controllerForDamping(current_t,current_x,tau,tau_first_der
                          x_ref.q2(index),x_ref.q2_first_deriv(index),x_ref.q2_second_deriv(index),x_ref.q2_third_deriv(index)];
     
     % Compute higher derivatives at current timestamp to compare them against the reference
-    [q_second_deriv,q_third_deriv,~,~,~,~,~,~,~,~] = StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params); 
+    [q_second_deriv,q_third_deriv,~,~,~,~,~,~,~,~] = stateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params); 
     
     x_link_angles = [current_x(1),current_x(2),q_second_deriv(1),q_third_deriv(1),...
                      current_x(5),current_x(6),q_second_deriv(2),q_third_deriv(2)];

@@ -14,7 +14,7 @@ function [fig_simulation,video_handle] = drawAnimatedSystem(t,x,x_ref,sys_params
     manipulator_positions.x = x_pos_link2;
     manipulator_positions.y = y_pos_link2;
     
-    video_handle = VideoWriter('animation');
+    video_handle = VideoWriter('visualization/animation');
     video_handle.FrameRate = 15;
     open(video_handle);
     

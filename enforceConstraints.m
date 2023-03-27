@@ -46,7 +46,7 @@ function u_enforced = enforceConstraints(control_for_damping_used,current_x,sys_
         
         %% Quadratic program for damped model
         [q_second_deriv,q_third_deriv,~,~,~,M,M_dot,M_dotdot,n,n_dotdot] = ...
-            StateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
+            stateVariablesHigherDerivatives(current_x,tau,tau_first_deriv,sys_params);
         
         if control_for_damping_used
             f_x = [current_x(2); q_second_deriv(1); q_third_deriv(1); 0;
