@@ -1,7 +1,5 @@
 # Control Barrier Functions for Learning-Based Regulation of Elastic Actuators with State Constraints
 
-![alt text](https://github.com/tmgerst/Control_Barrier_Functions_for_Elastic_Actuators/blob/master/animation.gif)
-
 The code contained in this repo constitutes the first part of my bachelor thesis at the chair of Information-Oriented Control at TUM. 
 It performs simulations on a two degree of freedom planar robot subject to constraints. 
 
@@ -9,6 +7,10 @@ Motivated by the huge importance of patient safety in medical applications, cons
 One way to formally guarantee constraint satisfaction in controlled dynamical systems is the use of control barrier functions (CBFs). 
 These functions create a sort of safety filter on the systems's control inputs: only control inputs are allowed that result in the system satisfying its constraints. 
 And if a control input would result in constraint violation, the filter modifies it to ensure constraint satisfaction. 
+
+<p align="center">
+  <img src="animation.gif" alt="animated" />
+</p>
 
 ## How to run
 Simply run `main`.
