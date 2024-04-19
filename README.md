@@ -1,5 +1,7 @@
 # Control Barrier Functions for Learning-Based Regulation of Elastic Actuators with State Constraints
 
+![alt text](https://github.com/tmgerst/Control_Barrier_Functions_for_Elastic_Actuators/blob/master/animation.gif)
+
 The code contained in this repo constitutes the first part of my bachelor thesis at the chair of Information-Oriented Control at TUM. 
 It performs simulations on a two degree of freedom planar robot subject to constraints. 
 
